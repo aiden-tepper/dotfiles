@@ -1,0 +1,97 @@
+{
+	"layer": "top",
+	"modules-left": [
+		"hyprland/workspaces"
+	],
+	"modules-center": [
+		"mpd"
+	],
+	"modules-right": [
+		"network",
+		"bluetooth",
+		"pulseaudio",
+		"battery",
+		"clock"
+	],
+	"mpd": {
+		"tooltip": false,
+		"format": "{stateIcon} {artist} - {album} - {title} ({elapsedTime:%M:%S}/{totalTime:%M:%S})",
+		"format-disconnected": "ﳌ",
+		"format-stopped": "",
+		"state-icons": {
+			"playing": "",
+			"paused": ""
+		}
+	},
+	"pulseaudio": {
+		"tooltip": false,
+		"scroll-step": 1,
+		"format": "{icon} {volume}%",
+		"format-muted": "󰝟",
+		"format-icons": {
+			"default": [
+				"奄",
+				"奔",
+				"墳"
+			]
+		},
+		"on-click": "kitty pacmixer"
+	},
+	"network": {
+		"tooltip": true,
+		"tooltip-format-wifi": "{essid}",
+		"format-icons": [
+		"󰤯",
+		"󰤟",
+		"󰤢",
+		"󰤥",
+		"󰤨"
+		],
+		"format-wifi": "{icon} ",
+		"format-disconnected": "󰤭 ",
+		"format-ethernet": " {ipaddr}",
+		"on-click": "kitty nmtui"
+	},
+	"bluetooth": {
+		"format-disabled": "󰂲",
+		"format-off": "󰂲",
+		"format-on": "󰂯",
+		"format-connected": "󰂱",
+		"on-click": "kitty bluetoothctl",
+		"tooltip": true,
+		"tooltip-format-connected": "{device_enumerate}"
+	},
+	"cpu": {
+		"tooltip": false,
+		"format": " {}%"
+	},
+	"memory": {
+		"tooltip": false,
+		"format": " {}%"
+	},
+	"battery": {
+		"format": "{icon}  {capacity}%",
+		"format-icons": [
+			"",
+			"",
+			"",
+			"",
+			""
+		],
+		"format-time": "{H}h{M}m",
+		"format-charging": " {icon}  {capacity}%",
+		"format-full": " {icon}  Charged",
+		"interval": 30,
+		"states": {
+			"warning": 25,
+			"critical": 10
+		},
+		"tooltip": false,
+		"on-click": "2"
+	},
+	"clock": {
+		"format": "{:%A, %B %d, %R}",
+		"locale": "en_US.utf8",
+		"interval": 1
+	}
+}
