@@ -29,10 +29,13 @@
   - Swaylock-effects
   - Libfprint-elanmoc2-newdvrs-git (aur)
   - polkit-kde authentication agent
+  - swayidle for triggers
 - Torrent - qbittorrent
 - Vpn - wireguard and protonVPN for config
 - Video player - mpv
 - Bluetooth - bluetoothctl
+- Google Drive client - rclone, fuse3
+- Ableton - ableton+wine/winetricks
 
 TODO:
 - Overlay volume/backlight/etc. - swayOSD

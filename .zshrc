@@ -117,3 +117,10 @@ source $ZSH/oh-my-zsh.sh
 
 # Alias for dotfiles git bare repo
 alias dotfiles="/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Created by `pipx` on 2024-02-08 18:41:08
+export PATH="$PATH:/home/aiden/.local/bin"

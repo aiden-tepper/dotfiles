@@ -4,7 +4,7 @@
 		"hyprland/workspaces"
 	],
 	"modules-center": [
-		"mpd"
+		"custom/spotify"
 	],
 	"modules-right": [
 		"network",
@@ -22,6 +22,12 @@
 			"playing": "",
 			"paused": ""
 		}
+	},
+	"custom/spotify": {
+		"tooltip": false,
+		"exec": "/usr/bin/python3 /home/aiden/.config/waybar/mediaplayer.py --player spotify",
+		"format": "{}",
+		"return-type": "json",
 	},
 	"pulseaudio": {
 		"tooltip": false,
@@ -79,7 +85,7 @@
 			""
 		],
 		"format-time": "{H}h{M}m",
-		"format-charging": " {icon}  {capacity}%",
+		"format-charging": " {icon}   {capacity}%",
 		"format-full": " {icon}  Charged",
 		"interval": 30,
 		"states": {
