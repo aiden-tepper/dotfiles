@@ -124,3 +124,5 @@ export NVM_DIR="$HOME/.nvm"
 
 # Created by `pipx` on 2024-02-08 18:41:08
 export PATH="$PATH:/home/aiden/.local/bin"
+
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
