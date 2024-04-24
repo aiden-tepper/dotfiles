@@ -126,3 +126,9 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="$PATH:/home/aiden/.local/bin"
 
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/home/aiden/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/home/aiden/Downloads/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/home/aiden/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/aiden/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
