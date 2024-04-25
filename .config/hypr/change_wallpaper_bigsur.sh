@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Define wallpaper paths
-SUNRISE="/home/aiden/.config/hypr/Linux_Dynamic_Wallpapers/Dynamic_Wallpapers/Surface/Surface01.jpg"
-MORNING="/home/aiden/.config/hypr/Linux_Dynamic_Wallpapers/Dynamic_Wallpapers/Surface/Surface02.jpg"
-AFTERNOON="/home/aiden/.config/hypr/Linux_Dynamic_Wallpapers/Dynamic_Wallpapers/Surface/Surface04.jpg"
-SUNSET="/home/aiden/.config/hypr/Linux_Dynamic_Wallpapers/Dynamic_Wallpapers/Surface/Surface05.jpg"
-NIGHT="/home/aiden/.config/hypr/Linux_Dynamic_Wallpapers/Dynamic_Wallpapers/Surface/Surface06.jpg"
+SUNRISE="/home/aiden/.config/hypr/wallpapers/macos/bigsur/sunrise"
+MORNING="/home/aiden/.config/hypr/wallpapers/macos/bigsur/morning"
+AFTERNOON="/home/aiden/.config/hypr/wallpapers/macos/bigsur/afternoon"
+SUNSET="/home/aiden/.config/hypr/wallpapers/macos/bigsur/sunset"
+NIGHT="/home/aiden/.config/hypr/wallpapers/macos/bigsur/night"
 
 # Set wallpaper based on argument
 case $1 in
