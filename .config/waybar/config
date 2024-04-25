@@ -32,13 +32,12 @@
 	"pulseaudio": {
 		"tooltip": false,
 		"scroll-step": 1,
-		"format": "{icon} {volume}%",
-		"format-muted": "󰝟",
+		"format": "{volume}%  {icon}",
+		"format-muted": "",
 		"format-icons": {
 			"default": [
-				"奄",
-				"奔",
-				"墳"
+				"",
+				""
 			]
 		},
 		"on-click": "kitty pacmixer"
@@ -53,8 +52,8 @@
 		"󰤥",
 		"󰤨"
 		],
-		"format-wifi": "{icon} ",
-		"format-disconnected": "󰤭 ",
+		"format-wifi": "{icon}",
+		"format-disconnected": "󰤭",
 		"format-ethernet": " {ipaddr}",
 		"on-click": "kitty nmtui"
 	},
@@ -96,11 +95,11 @@
 	//	"on-click": "2"
 	//},
 	"battery": {
-        	"format": "{capacity}% {icon}",
-        	"format-charging": "{capacity}% ",
-        	"format-plugged": "{capacity}% ",
+        	"format": "{capacity}%  {icon}",
+        	"format-charging": "{capacity}% 󰂄",
+        	"format-plugged": "{capacity}% 󰚥",
         	"format-alt": "{time} {icon}",
-        	"format-icons": ["", "", "", "", "", "", "", "", "", ""],
+        	"format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
     	},
 //	"clock": {
 //		"format": "{:%A, %B %d, %R}",

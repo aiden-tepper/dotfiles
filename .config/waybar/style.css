@@ -82,7 +82,7 @@ window#waybar.PCSX2 #window {
     transition: none;
     background: #3f3640;
     opacity: 0.6;
-    box-shadow: 0 0 2 1 #000000;
+    box-shadow: 0 0 2 2 #000000;
 }
 
 #workspaces button {
@@ -148,13 +148,13 @@ window#waybar.PCSX2 #window {
 #network {
 	margin: 5px;
 	padding-left: 16px;
-	padding-right: 16px;
+	padding-right: 21px;
 	border-radius: 10px;
 	transition: none;
 	color: #ffffff;
 	background: #3f3640;
 	opacity: 0.6;
-    	box-shadow: 0 0 2 1 #000000;
+    	box-shadow: 0 0 2 2 #000000;
 }
 
 #bluetooth {
@@ -166,19 +166,19 @@ window#waybar.PCSX2 #window {
 	color: #ffffff;
 	background: #3f3640;
 	opacity: 0.6;
-    	box-shadow: 0 0 2 1 #000000;
+    	box-shadow: 0 0 2 2 #000000;
 }
 
 #pulseaudio {
 	margin: 5px;
 	padding-left: 16px;
-	padding-right: 16px;
+	padding-right: 20px;
 	border-radius: 10px;
 	transition: none;
 	color: #ffffff;
 	background: #3f3640;
 	opacity: 0.6;
-    	box-shadow: 0 0 2 1 #000000;
+    	box-shadow: 0 0 2 2 #000000;
 }
 
 #temperature {
@@ -214,7 +214,7 @@ window#waybar.PCSX2 #window {
 	color: #ffffff;
 	background: #3f3640;
 	opacity: 0.6;
-    	box-shadow: 0 0 2 1 #000000;
+    	box-shadow: 0 0 2 2 #000000;
 }
 
 #memory {
@@ -238,7 +238,7 @@ window#waybar.PCSX2 #window {
 	color: #ffffff;
 	background: #3f3640;
 	opacity: 0.6;
-    	box-shadow: 0 0 2 1 #000000;
+    	box-shadow: 0 0 2 2 #000000;
 }
 
 
