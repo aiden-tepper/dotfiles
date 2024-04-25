@@ -11,7 +11,8 @@
 * {
 	border: none;
 	border-radius: 0;
-	font-family: Nerd Font Hack;
+	/*font-family: Nerd Font Hack;*/
+	font-family: MesloLGL NF;
 	font-size: 14px;
 	min-height: 24px;
 }
@@ -21,7 +22,7 @@ window#waybar {
 }
 
 window#waybar.hidden {
-	opacity: 0.8;
+	opacity: 0.2;
 }
 
 #window {
@@ -46,6 +47,7 @@ window#waybar.PCSX2 #window {
 	background: #e6e6e6;
 }
 
+/*
 #workspaces {
 	margin-top: 8px;
 	margin-left: 12px;
@@ -71,6 +73,43 @@ window#waybar.PCSX2 #window {
 	box-shadow: inherit;
 	text-shadow: inherit;
 	color: #ff79c6;
+}
+*/
+
+#workspaces {
+    margin: 5px;
+    border-radius: 10px;
+    transition: none;
+    background: #3f3640;
+    opacity: 0.6;
+    box-shadow: 0 0 2 1 #000000;
+}
+
+#workspaces button {
+    transition: none;
+    color: #7c818c;
+    background: transparent;
+    padding: 5px;
+    font-size: 18px;
+}
+
+#workspaces button.persistent {
+    color: #7c818c;
+    font-size: 12px;
+}
+
+/* https://github.com/Alexays/Waybar/wiki/FAQ#the-workspace-buttons-have-a-strange-hover-effect */
+#workspaces button:hover {
+    transition: none;
+    box-shadow: inherit;
+    text-shadow: inherit;
+    border-radius: inherit;
+    color: #3f3640;
+    background: #7c818c;
+}
+
+#workspaces button.active {
+    color: white;
 }
 
 #mpd {
@@ -107,39 +146,39 @@ window#waybar.PCSX2 #window {
 }
 
 #network {
-	margin-top: 8px;
-	margin-left: 8px;
+	margin: 5px;
 	padding-left: 16px;
 	padding-right: 16px;
-	margin-bottom: 0;
-	border-radius: 26px;
+	border-radius: 10px;
 	transition: none;
-	color: #4d4d4d;
-	background: #bd93f9;
+	color: #ffffff;
+	background: #3f3640;
+	opacity: 0.6;
+    	box-shadow: 0 0 2 1 #000000;
 }
 
 #bluetooth {
-	margin-top: 8px;
-	margin-left: 8px;
+	margin: 5px;
 	padding-left: 16px;
 	padding-right: 16px;
-	margin-bottom: 0;
-	border-radius: 26px;
+	border-radius: 10px;
 	transition: none;
-	color: #4d4d4d;
-	background: #798cdb;
+	color: #ffffff;
+	background: #3f3640;
+	opacity: 0.6;
+    	box-shadow: 0 0 2 1 #000000;
 }
 
 #pulseaudio {
-	margin-top: 8px;
-	margin-left: 8px;
+	margin: 5px;
 	padding-left: 16px;
 	padding-right: 16px;
-	margin-bottom: 0;
-	border-radius: 26px;
+	border-radius: 10px;
 	transition: none;
-	color: #4d4d4d;
-	background: #9aedfe;
+	color: #ffffff;
+	background: #3f3640;
+	opacity: 0.6;
+    	box-shadow: 0 0 2 1 #000000;
 }
 
 #temperature {
@@ -167,15 +206,15 @@ window#waybar.PCSX2 #window {
 }
 
 #battery {
-	margin-top: 8px;
-	margin-left: 8px;
+	margin: 5px;
 	padding-left: 16px;
 	padding-right: 16px;
-	margin-bottom: 0;
-	border-radius: 26px;
+	border-radius: 10px;
 	transition: none;
-	color: #4d4d4d;
-	background: #f1fa8c;
+	color: #ffffff;
+	background: #3f3640;
+	opacity: 0.6;
+    	box-shadow: 0 0 2 1 #000000;
 }
 
 #memory {
@@ -191,15 +230,15 @@ window#waybar.PCSX2 #window {
 }
 
 #clock {
-	margin-top: 8px;
-	margin-left: 8px;
-	margin-right: 12px;
+	margin: 5px;
 	padding-left: 16px;
 	padding-right: 16px;
-	margin-bottom: 0;
-	border-radius: 26px;
+	border-radius: 10px;
 	transition: none;
-	color: #f8f8f2;
-	background: #282a36;
+	color: #ffffff;
+	background: #3f3640;
+	opacity: 0.6;
+    	box-shadow: 0 0 2 1 #000000;
 }
+
 

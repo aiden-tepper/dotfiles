@@ -1,5 +1,6 @@
 {
 	"layer": "top",
+    	"margin": "10 10 0 10",
 	"modules-left": [
 		"hyprland/workspaces"
 	],
@@ -7,9 +8,8 @@
 		"custom/spotify"
 	],
 	"modules-right": [
-		"network",
-		"bluetooth",
 		"pulseaudio",
+		"network",
 		"battery",
 		"clock"
 	],
@@ -75,29 +75,42 @@
 		"tooltip": false,
 		"format": " {}%"
 	},
+	//"battery": {
+	//	"format": "{icon}  {capacity}%",
+	//	"format-icons": [
+	//		"",
+	//		"",
+	//		"",
+	//		"",
+	//		""
+	//	],
+	//	"format-time": "{H}h{M}m",
+	//	"format-charging": " {icon}   {capacity}%",
+	//	"format-full": " {icon}  Charged",
+	//	"interval": 30,
+	//	"states": {
+	//		"warning": 25,
+	//		"critical": 10
+	//	},
+	//	"tooltip": false,
+	//	"on-click": "2"
+	//},
 	"battery": {
-		"format": "{icon}  {capacity}%",
-		"format-icons": [
-			"",
-			"",
-			"",
-			"",
-			""
-		],
-		"format-time": "{H}h{M}m",
-		"format-charging": " {icon}   {capacity}%",
-		"format-full": " {icon}  Charged",
-		"interval": 30,
-		"states": {
-			"warning": 25,
-			"critical": 10
-		},
-		"tooltip": false,
-		"on-click": "2"
-	},
+        	"format": "{capacity}% {icon}",
+        	"format-charging": "{capacity}% ",
+        	"format-plugged": "{capacity}% ",
+        	"format-alt": "{time} {icon}",
+        	"format-icons": ["", "", "", "", "", "", "", "", "", ""],
+    	},
+//	"clock": {
+//		"format": "{:%A, %B %d, %R}",
+//		"locale": "en_US.utf8",
+//		"interval": 1
+//	},
 	"clock": {
-		"format": "{:%A, %B %d, %R}",
+        	"tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+        	"format": "{:%a, %d %b, %I:%M %p}",
 		"locale": "en_US.utf8",
 		"interval": 1
-	}
+    	},
 }
