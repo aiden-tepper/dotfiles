@@ -84,3 +84,30 @@ Bash
 exit
 umount -R /mnt
 reboot
+
+2. Nix Installation
+Bash
+
+# Install Determinate Nix
+curl -fsSL [https://install.determinate.systems/nix](https://install.determinate.systems/nix) | sh -s -- install
+
+3. Identity & Authentication (SSH)
+
+This configuration uses SSH for GitHub to avoid plaintext token storage.
+
+    Generate Key: ssh-keygen -t ed25519 -C "aidenjtep@gmail.com"
+
+    Register Key:
+    Bash
+
+    nix shell nixpkgs#gh -c gh ssh-key add ~/.ssh/id_ed25519.pub --title "HostName"
+
+4. Usage
+Initial Deployment
+Bash
+
+# macOS
+nix run github:nix-community/home-manager -- switch --flake .#macbook
+
+# Arch Linux
+nix run github:nix-community/home-manager -- switch --flake .#spectre
