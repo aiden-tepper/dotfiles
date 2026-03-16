@@ -15,21 +15,28 @@
   - [Set up the language and tty keyboard map](#set-up-the-language-and-tty-keyboard-map)
   - [Hostname and Host configuration](#hostname-and-host-configuration)
   - [Root and users](#root-and-users)
+  - [mkinitcpio configuration](#mkinitcpio-configuration)
   - [UKI setup](#uki-setup)
   - [Unmount everything and reboot](#unmount-everything-and-reboot)
-  - [Intel Optane swap](#intel-optane-swap)
+  - [Intel Optane swap](#intel-optane-swap-hp-spectre-14--skip-if-you-dont-have-optane)
   - [Paru AUR helper installation](#paru-aur-helper-installation)
   - [System hygiene and performance](#system-hygiene-and-performance)
     - [XDG Base Directory](#xdg-base-directory)
     - [NetworkManager iwd backend](#networkmanager-iwd-backend)
+    - [Reflector configuration](#reflector-configuration)
+    - [Firewall](#firewall)
+    - [pacman.conf tweaks](#pacmanconf-tweaks)
     - [Maintenance timers](#maintenance-timers)
   - [Finalization](#finalization)
+    - [Post-reboot verification checklist](#post-reboot-verification-checklist)
 - [Video drivers](#video-drivers)
   - [Intel \(HP Spectre 14\)](#intel-hp-spectre-14)
 
 # Introduction
 
 The goal of this guide is to help new users set up a modern and minimal installation of **Arch Linux** with **BTRFS** on an **UEFI system**. I'll start from the basic terminal installation and then set up **video drivers, a desktop environment and provide basic gaming configuration**. This guide is thought to be read alongside the wiki, so that it if something ever changes you can fix it but it's not necessary unless my guide becomes outdated. Also I will mention external references to justify some choices that I've made so that curious users can delve into the details.  
+
+> **Personal reference note:** This guide was written for my specific hardware (HP Spectre 14 with Intel CPU and Intel Optane). Throughout the guide, you will see references to my username (`aiden`), timezone (`America/New_York`), `intel-ucode`, and Optane-specific sections. Adapt these to your own hardware and preferences — AMD users should replace `intel-ucode` with `amd-ucode`, skip the Optane section, and adjust video driver packages accordingly.
 
 ### Note that:
 
@@ -47,7 +54,7 @@ The goal of this guide is to help new users set up a modern and minimal installa
 
 First set up your keyboard layout  
 
-```fish
+```bash
 # Load the US keyboard layout
 loadkeys us
 ```
@@ -56,7 +63,7 @@ loadkeys us
 
 Check that we are in UEFI mode  
 
-```fish
+```bash
 # If this command prints 64 or 32 then you are in UEFI
 cat /sys/firmware/efi/fw_platform_size
 ```
@@ -65,7 +72,7 @@ cat /sys/firmware/efi/fw_platform_size
 
 Connect to WiFi  
 
-```fish
+```bash
 # Launch the iwd interactive prompt
 iwctl
 
@@ -90,7 +97,7 @@ exit
 
 Check the internet connection  
 
-```fish
+```bash
 ping -c 5 archlinux.org 
 ```
 
@@ -98,15 +105,13 @@ ping -c 5 archlinux.org
 
 Check the system clock
 
-```fish
+```bash
 # Check if ntp is active and if the time is right
 timedatectl
 
-# In case it's not active you can do
+# In case it's not active you can do (this only affects the live ISO session;
+# we enable time sync on the installed system after the first reboot)
 timedatectl set-ntp true
-
-# Or this
-systemctl enable systemd-timesyncd.service
 ```
 
 <br>
@@ -124,7 +129,7 @@ I will make 2 partitions:
 
 <br>
 
-```fish
+```bash
 # Check the drive name. Mine is /dev/nvme0n1
 # If you have an hdd is something like sdax
 fdisk -l
@@ -175,14 +180,15 @@ ENTER
 
 For the file system I've chosen [**BTRFS**](https://wiki.archlinux.org/title/Btrfs) which has evolved quite a lot in the recent years. It is most known for its **Copy on Write** feature which enables it to make system snapshots in a blink of a an eye and to save a lot of disk space, which can be even saved to a greater extent by enabling built\-in **compression**. Also it lets the user create **subvolumes** which can be individually snapshotted.
 
-```fish
+```bash
 # Find the efi partition with fdisk -l or lsblk. For me it's /dev/nvme0n1p1 and format it.
 mkfs.fat -F 32 /dev/nvme0n1p1
 
 # Find the root partition. For me it's /dev/nvme0n1p2 and format it. I will use BTRFS.
 mkfs.btrfs /dev/nvme0n1p2
 
-# HP Spectre 14: verify the Optane drive is at /dev/nvme1n1 before formatting.
+# HP Spectre 14 ONLY — skip these two commands if you don't have an Optane drive.
+# Verify the Optane drive is at /dev/nvme1n1 before formatting.
 # Run: lsblk -o NAME,MODEL and confirm nvme1n1 is the Intel Optane device.
 # Then format it as swap and activate it so genfstab picks it up.
 mkswap /dev/nvme1n1
@@ -198,7 +204,7 @@ mount /dev/nvme0n1p2 /mnt
 
 I will lay down the subvolumes on a **flat** layout, which is overall superior in my opinion and less constrained than a **nested** one. What's the difference ? If you're interested [this section of the old sysadmin guide](https://archive.kernel.org/oldwiki/btrfs.wiki.kernel.org/index.php/SysadminGuide.html#Layout) explains it.
 
-```fish
+```bash
 # Create the subvolumes. Subvolumes are identified by prepending @.
 # @        -> /           (root filesystem)
 # @home    -> /home       (user data)
@@ -217,7 +223,7 @@ umount /mnt
 
 For this guide I'll compress the btrfs subvolumes with **Zstd** level 3, which has proven to be [a good algorithm among the choices](https://www.phoronix.com/review/btrfs-zstd-compress). `noatime` is added to all subvolumes to avoid unnecessary write amplification on SSDs.
 
-```fish
+```bash
 # Mount all subvolumes with compress=zstd:3 and noatime for best SSD performance.
 mount -o compress=zstd:3,noatime,subvol=@ /dev/nvme0n1p2 /mnt
 mkdir -p /mnt/home
@@ -232,7 +238,7 @@ mount -o compress=zstd:3,noatime,subvol=@pkg /dev/nvme0n1p2 /mnt/var/cache/pacma
 
 Now we have to mount the efi partition. In general there are 2 main mountpoints to use: `/efi` or `/boot` but in this configuration i am **forced** to use `/efi`, because by choosing `/boot` we could experience a **system crash** when trying to restore `@` _\( the root subvolume \)_ to a previous state after kernel updates. This happens because `/boot` files such as the kernel won't reside on `@` but on the efi partition and hence they can't be saved when snapshotting `@`. Also this choice grants separation of concerns and also is good if one wants to encrypt `/boot`, since you can't encrypt efi files. Learn more [here](https://wiki.archlinux.org/title/EFI_system_partition#Typical_mount_points)
 
-```fish
+```bash
 mkdir -p /mnt/efi
 mount /dev/nvme0n1p1 /mnt/efi
 ```
@@ -241,7 +247,7 @@ mount /dev/nvme0n1p1 /mnt/efi
 
 ## Packages installation  
 
-```fish
+```bash
 # This will install some packages to "bootstrap" methaphorically our system. Feel free to add the ones you want
 # "base, linux, linux-firmware" are needed. If you want a more stable kernel, then swap linux with linux-lts
 # "base-devel" base development packages
@@ -259,17 +265,18 @@ mount /dev/nvme0n1p1 /mnt/efi
 # "reflector" to manage mirrors for pacman
 # "pacman-contrib" provides paccache for automated package cache cleaning
 # "fish" my favourite shell
-# "openssh" to use ssh and manage keys
+# "openssh" to use the ssh client and manage keys (we do NOT enable sshd — this is client-only)
 # "man" for manual pages
 # "sudo" to run commands as other users
-pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs systemd-ukify efibootmgr timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector pacman-contrib fish openssh man sudo intel-ucode
+# "nftables" minimal stateful firewall
+pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs systemd-ukify efibootmgr timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector pacman-contrib fish openssh man sudo intel-ucode nftables
 ```
 
 <br>
 
 ## Fstab  
 
-```fish
+```bash
 # Fetch the disk mounting points as they are now ( we mounted everything before ) and generate instructions to let the system know how to mount the various disks automatically
 genfstab -U /mnt >> /mnt/etc/fstab
 
@@ -282,7 +289,7 @@ cat /mnt/etc/fstab
 
 ## Context switch to our new system  
 
-```fish
+```bash
 # To access our new system we chroot into it
 arch-chroot /mnt
 ```
@@ -291,7 +298,7 @@ arch-chroot /mnt
 
 ## Set up the time zone
 
-```fish
+```bash
 # Set up the local time zone for New York
 ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 
@@ -305,7 +312,7 @@ hwclock --systohc
 
 Edit `/etc/locale.gen` and uncomment `en_US.UTF-8 UTF-8`.  
 
-```fish
+```bash
 # To edit I will use vim, feel free to use nano instead.
 vim /etc/locale.gen
 
@@ -317,8 +324,7 @@ locale-gen
 
 Create `/etc/locale.conf` and set `LANG=en_US.UTF-8`.
 
-```fish
-touch /etc/locale.conf
+```bash
 vim /etc/locale.conf
 ```
 
@@ -326,7 +332,7 @@ vim /etc/locale.conf
 
 Now to make the current keyboard layout permanent for tty sessions, create `/etc/vconsole.conf` and write `KEYMAP=us`
 
-```fish
+```bash
 vim /etc/vconsole.conf
 ```
 
@@ -334,13 +340,11 @@ vim /etc/vconsole.conf
 
 ## Hostname and Host configuration
 
-```fish
+```bash
 # Create /etc/hostname then choose and write the name of your pc in the first line. In my case I'll use Arch
-touch /etc/hostname
 vim /etc/hostname
 
 # Create the /etc/hosts file. This is very important because it will resolve the listed hostnames locally and not over Internet DNS.
-touch /etc/hosts
 ```
 
 Write the following ip, hostname pairs inside /etc/hosts, replacing `Arch` with **YOUR** hostname:
@@ -351,7 +355,7 @@ Write the following ip, hostname pairs inside /etc/hosts, replacing `Arch` with 
 127.0.1.1 Arch
 ```
 
-```fish
+```bash
 # Edit the file with the information above
 vim /etc/hosts
 ```
@@ -360,7 +364,7 @@ vim /etc/hosts
 
 ## Root and users  
 
-```fish
+```bash
 # Set up the root password
 passwd
 
@@ -379,13 +383,32 @@ chmod 440 /etc/sudoers.d/10-admins
 
 <br>
 
+## mkinitcpio configuration
+
+Before building the kernel images, verify that mkinitcpio is configured correctly for a BTRFS root filesystem. The default configuration *usually* works because the `btrfs` module is auto-detected, but it's worth being explicit — especially since a missing module means an unbootable system.
+
+```bash
+# Verify that the btrfs module will be included in the initramfs.
+# Open /etc/mkinitcpio.conf and ensure "btrfs" is in the MODULES array:
+#   MODULES=(btrfs)
+# This guarantees the module is always present, even if autodetection fails.
+vim /etc/mkinitcpio.conf
+
+# Regenerate initramfs images after any changes
+mkinitcpio -P
+```
+
+<br>
+
 ## UKI setup
 
 A **Unified Kernel Image (UKI)** bundles the kernel, initramfs, kernel command line, and CPU microcode into a single signed `.efi` binary. This makes the boot process **atomic** (one file = one boot state) and is the foundation for Secure Boot with custom keys. We use `systemd-stub` as the bootloader stub and `systemd-boot` (`bootctl`) as the EFI boot manager.
 
+> **Alternative approach:** Since mkinitcpio 38+, you can configure UKI generation directly in `/etc/mkinitcpio.d/linux.preset` by setting `default_uki=` and `fallback_uki=`. This makes mkinitcpio build UKIs natively on `mkinitcpio -P` and eliminates the need for manual `ukify build` calls and the custom pacman hook below. The manual `ukify` approach used here gives you more explicit control, but the mkinitcpio preset method is less code to maintain. See [the wiki](https://wiki.archlinux.org/title/Unified_kernel_image#mkinitcpio) for details.
+
 Initialize systemd-boot on the EFI system partition:
 
-```fish
+```bash
 bootctl install
 ```
 
@@ -393,45 +416,88 @@ bootctl install
 
 Create the kernel command line file that `ukify` will embed into the UKI. Replace `PARTUUID` with the actual UUID of your root partition (`blkid /dev/nvme0n1p2`):
 
-```fish
+```bash
 mkdir -p /etc/kernel
 
 # Write the kernel command line. Adjust root= if your partition layout differs.
-# The "quiet" and "splash" flags give a clean boot; remove them for verbose output.
-echo "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet splash" \
+# "quiet" suppresses most boot messages; remove it for verbose output during debugging.
+echo "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet" \
   > /etc/kernel/cmdline
 ```
 
 <br>
 
-Build the initial UKI manually:
+Build the initial UKIs manually (main **and** fallback). The fallback image includes all kernel modules, so you can always boot even if the main initramfs is missing a driver:
 
-```fish
+```bash
+# Main UKI
 ukify build \
   --linux=/boot/vmlinuz-linux \
   --initrd=/boot/intel-ucode.img \
   --initrd=/boot/initramfs-linux.img \
   --cmdline=@/etc/kernel/cmdline \
   --output=/efi/EFI/Linux/arch-linux.efi
+
+# Fallback UKI (uses the full fallback initramfs)
+ukify build \
+  --linux=/boot/vmlinuz-linux \
+  --initrd=/boot/intel-ucode.img \
+  --initrd=/boot/initramfs-linux-fallback.img \
+  --cmdline=@/etc/kernel/cmdline \
+  --output=/efi/EFI/Linux/arch-linux-fallback.efi
 ```
 
 <br>
 
-Register the UKI as a boot entry so the firmware can find it:
+Register both UKIs as boot entries so the firmware can find them. The fallback entry has a lower priority and acts as a safety net:
 
-```fish
+```bash
+# Main entry
 efibootmgr --create \
   --disk /dev/nvme0n1 --part 1 \
   --label "Arch Linux (UKI)" \
   --loader 'EFI\Linux\arch-linux.efi' \
   --unicode
+
+# Fallback entry
+efibootmgr --create \
+  --disk /dev/nvme0n1 --part 1 \
+  --label "Arch Linux (UKI fallback)" \
+  --loader 'EFI\Linux\arch-linux-fallback.efi' \
+  --unicode
 ```
 
 <br>
 
-**Automation — pacman hook:** Install a hook so the UKI is automatically rebuilt every time the kernel or microcode is updated.
+**Automation — pacman hook:** Install a hook so the UKIs are automatically rebuilt every time the kernel or microcode is updated. Pacman hook `Exec=` does **not** support backslash line continuations, so we wrap the build commands in a script.
 
-```fish
+```bash
+# Create the rebuild script
+cat > /usr/local/bin/rebuild-ukis << 'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+# Main UKI
+/usr/bin/ukify build \
+  --linux=/boot/vmlinuz-linux \
+  --initrd=/boot/intel-ucode.img \
+  --initrd=/boot/initramfs-linux.img \
+  --cmdline=@/etc/kernel/cmdline \
+  --output=/efi/EFI/Linux/arch-linux.efi
+
+# Fallback UKI
+/usr/bin/ukify build \
+  --linux=/boot/vmlinuz-linux \
+  --initrd=/boot/intel-ucode.img \
+  --initrd=/boot/initramfs-linux-fallback.img \
+  --cmdline=@/etc/kernel/cmdline \
+  --output=/efi/EFI/Linux/arch-linux-fallback.efi
+SCRIPT
+
+chmod +x /usr/local/bin/rebuild-ukis
+```
+
+```bash
 mkdir -p /etc/pacman.d/hooks
 
 cat > /etc/pacman.d/hooks/95-ukify.hook << 'EOF'
@@ -443,14 +509,9 @@ Target = usr/lib/modules/*/vmlinuz
 Target = boot/intel-ucode.img
 
 [Action]
-Description = Rebuilding Unified Kernel Image...
+Description = Rebuilding Unified Kernel Images (main + fallback)...
 When = PostTransaction
-Exec = /usr/bin/ukify build \
-  --linux=/boot/vmlinuz-linux \
-  --initrd=/boot/intel-ucode.img \
-  --initrd=/boot/initramfs-linux.img \
-  --cmdline=@/etc/kernel/cmdline \
-  --output=/efi/EFI/Linux/arch-linux.efi
+Exec = /usr/local/bin/rebuild-ukis
 Depends = systemd
 EOF
 ```
@@ -459,7 +520,7 @@ EOF
 
 ## Unmount everything and reboot 
 
-```fish
+```bash
 # Enable newtork manager before rebooting otherwise, you won't be able to connect
 systemctl enable NetworkManager
 
@@ -480,18 +541,30 @@ timedatectl set-ntp true
 
 <br>
 
-## Intel Optane swap
+## Intel Optane swap (HP Spectre 14 — skip if you don't have Optane)
+
+> **Hardware-specific:** This section applies only to systems with an Intel Optane drive. If your machine doesn't have one, skip ahead to [Paru AUR helper installation](#paru-aur-helper-installation).
 
 The HP Spectre 14 has an Intel Optane drive at `/dev/nvme1n1`. Because Optane offers dramatically lower latency than a regular NVMe SSD, it makes an ideal dedicated swap device — providing better responsiveness under memory pressure and shifting swap-induced wear away from the primary SSD onto the Optane drive.
 
 The drive was already formatted with `mkswap` and activated with `swapon` during the [Disk formatting](#disk-formatting) step, so `genfstab` will have included it in `/etc/fstab` automatically. No further configuration is required.
 
-```fish
+```bash
 # Verify the swap entry is present in fstab
 grep swap /etc/fstab
 
 # Verify swap is active
 swapon --show
+```
+
+Since Optane has much lower latency than a regular SSD, you may want to tune `vm.swappiness` to take better advantage of it. The default value is `60`. A higher value makes the kernel more willing to use swap, which is reasonable when swap is on a fast Optane device:
+
+```bash
+# Optional: increase swappiness for low-latency Optane swap (default is 60)
+# Values range from 0 (avoid swap) to 200 (aggressively swap).
+# 100 is a reasonable choice for Optane; experiment to taste.
+echo 'vm.swappiness=100' | sudo tee /etc/sysctl.d/99-swappiness.conf
+sudo sysctl --system
 ```
 
 <br>
@@ -502,9 +575,12 @@ To gain access to the Arch User Repository we need an AUR helper. I will use [**
 
 > Note: you can't execute makepkg as root, so you need to be logged in as aiden
 
-```fish
+```bash
 # Install paru
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/paru.git && cd paru && makepkg -si
+
+# Clean up the build directory
+cd ~ && rm -rf paru
 ```
 
 <br>
@@ -513,16 +589,17 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/pa
 
 ### XDG Base Directory
 
-Setting `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_DATA_HOME` system-wide via `/etc/environment` ensures that well-behaved applications store their files under explicit, predictable paths rather than scattering hidden dot-folders across `$HOME`. This keeps the user's home directory clean and easy to back up or inspect.
+Setting `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_DATA_HOME` explicitly ensures that well-behaved applications store their files under predictable paths rather than scattering hidden dot-folders across `$HOME`. This keeps the user's home directory clean and easy to back up or inspect.
 
-```fish
-sudo tee -a /etc/environment << 'EOF'
+> **Warning:** `/etc/environment` is parsed by PAM and **does not perform shell variable expansion** — writing `$HOME` there would set the literal string `$HOME`, not your home directory path. Use a shell profile drop-in instead.
 
+```bash
+sudo tee /etc/profile.d/xdg-base-dirs.sh << 'EOF'
 # XDG Base Directory — keep $HOME pristine
-XDG_CONFIG_HOME="$HOME/.config"
-XDG_CACHE_HOME="$HOME/.cache"
-XDG_DATA_HOME="$HOME/.local/share"
-XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
 EOF
 ```
 
@@ -532,31 +609,120 @@ EOF
 
 By default NetworkManager uses its own internal `wpa_supplicant` WiFi backend. Switching to `iwd` (already installed) gives better WiFi roaming, faster scanning, and lower memory usage.
 
-```fish
+> **Important:** NetworkManager's iwd backend requires the `iwd` daemon to be running. Enable it alongside the configuration.
+
+```bash
 sudo mkdir -p /etc/NetworkManager/conf.d
 
 sudo tee /etc/NetworkManager/conf.d/wifi_backend.conf << 'EOF'
 [device]
 wifi.backend=iwd
 EOF
+
+# iwd must be running for the NetworkManager iwd backend to work
+sudo systemctl enable --now iwd
 ```
 
 Restart NetworkManager to apply the change:
 
-```fish
+```bash
 sudo systemctl restart NetworkManager
+```
+
+<br>
+
+### Reflector configuration
+
+Before enabling `reflector.timer`, configure it so it selects fast, nearby mirrors instead of using defaults that may be slow:
+
+```bash
+sudo mkdir -p /etc/xdg/reflector
+
+sudo tee /etc/xdg/reflector/reflector.conf << 'EOF'
+# Reflector configuration — adjust country/count to your location
+--save /etc/pacman.d/mirrorlist
+--protocol https
+--country "United States"
+--latest 10
+--sort rate
+EOF
+```
+
+<br>
+
+### Firewall
+
+Even a minimal desktop should have a basic firewall. `nftables` (already installed) is the modern replacement for `iptables`. We'll set up a simple stateful firewall that allows outbound traffic and blocks unsolicited inbound connections:
+
+```bash
+sudo tee /etc/nftables.conf << 'EOF'
+#!/usr/bin/nft -f
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        # Allow established/related connections
+        ct state established,related accept
+
+        # Allow loopback
+        iif "lo" accept
+
+        # Allow ICMP (ping)
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+
+        # Drop everything else (policy drop)
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}
+EOF
+
+sudo systemctl enable --now nftables
+```
+
+> If you later need to allow inbound connections (e.g., SSH), add a rule like `tcp dport 22 accept` to the `input` chain.
+
+<br>
+
+### pacman.conf tweaks
+
+Enable some quality-of-life options in `/etc/pacman.conf`:
+
+```bash
+# Enable colored output, verbose package lists, and parallel downloads.
+# Uncomment or add the following lines in the [options] section of /etc/pacman.conf:
+#   Color
+#   VerbosePkgLists
+#   ParallelDownloads = 5
+#
+# If you need 32-bit library support (e.g., for gaming with Steam), also uncomment:
+#   [multilib]
+#   Include = /etc/pacman.d/mirrorlist
+sudo vim /etc/pacman.conf
 ```
 
 <br>
 
 ### Maintenance timers
 
-Enable these two systemd timers so the system keeps itself clean automatically:
+Enable these systemd timers so the system keeps itself clean and performant automatically:
 
+- **`fstrim.timer`** — runs periodic TRIM on SSDs (weekly by default). This is the recommended approach over continuous discard (`discard` mount option), as it batches TRIM operations and reduces I/O overhead.
 - **`reflector.timer`** — periodically refreshes the pacman mirror list, ensuring you always download from fast mirrors.
 - **`paccache.timer`** — runs `paccache` weekly to trim the pacman package cache (from `pacman-contrib`). By default it keeps the three most recent versions of each *installed* package and removes all cached versions of *uninstalled* packages, reclaiming disk space automatically.
 
-```fish
+```bash
+sudo systemctl enable --now fstrim.timer
 sudo systemctl enable --now reflector.timer
 sudo systemctl enable --now paccache.timer
 ```
@@ -565,7 +731,7 @@ sudo systemctl enable --now paccache.timer
 
 ## Finalization
 
-```fish
+```bash
 # To complete the main/basic installation reboot the system
 reboot
 ```
@@ -573,6 +739,38 @@ reboot
 > After these steps you **should** be able to boot on your newly installed Arch Linux, if so congrats !  
 
 > The basic installation is complete and you could stop here, but if you want to to have a graphical session, you can continue reading the guide.
+
+<br>
+
+### Post-reboot verification checklist
+
+After rebooting, run through these quick sanity checks to confirm everything is working:
+
+```bash
+# 1. Verify BTRFS mounts have the correct options (compress, noatime, subvol)
+mount | grep btrfs
+
+# 2. Verify swap is active (if applicable)
+swapon --show
+
+# 3. Verify network connectivity
+ping -c 3 archlinux.org
+
+# 4. Verify time synchronization is active
+timedatectl
+
+# 5. Verify all systemd timers are active
+systemctl list-timers --all
+
+# 6. Verify the firewall is running
+sudo nft list ruleset
+
+# 7. Verify UKI boot entries exist
+efibootmgr -v
+
+# 8. Verify the iwd backend is active
+systemctl status iwd
+```
 
 <br>
 
@@ -584,7 +782,7 @@ The HP Spectre 14 uses **Intel Iris Xe integrated graphics**. Install the open-s
 
 ## Intel (HP Spectre 14)
 
-```fish
+```bash
 # What are we installing?
 # mesa: DRI driver for 3D acceleration.
 # vulkan-intel: Vulkan support.
