@@ -15,10 +15,14 @@
   - [Set up the language and tty keyboard map](#set-up-the-language-and-tty-keyboard-map)
   - [Hostname and Host configuration](#hostname-and-host-configuration)
   - [Root and users](#root-and-users)
-  - [Grub configuration](#grub-configuration)
+  - [UKI setup](#uki-setup)
   - [Unmount everything and reboot](#unmount-everything-and-reboot)
-  - [Automatic snapshot boot entries update](#automatic-snapshot-boot-entries-update)
+  - [zram setup](#zram-setup)
   - [Paru AUR helper installation](#paru-aur-helper-installation)
+  - [System hygiene and performance](#system-hygiene-and-performance)
+    - [XDG Base Directory](#xdg-base-directory)
+    - [NetworkManager iwd backend](#networkmanager-iwd-backend)
+    - [Maintenance timers](#maintenance-timers)
   - [Finalization](#finalization)
 - [Video drivers](#video-drivers)
   - [Intel \(HP Spectre 14\)](#intel-hp-spectre-14)
@@ -189,9 +193,15 @@ mount /dev/nvme0n1p2 /mnt
 I will lay down the subvolumes on a **flat** layout, which is overall superior in my opinion and less constrained than a **nested** one. What's the difference ? If you're interested [this section of the old sysadmin guide](https://archive.kernel.org/oldwiki/btrfs.wiki.kernel.org/index.php/SysadminGuide.html#Layout) explains it.
 
 ```fish
-# Create the subvolumes, in my case I choose to make a subvolume for / and one for /home. Subvolumes are identified by prepending @
+# Create the subvolumes. Subvolumes are identified by prepending @.
+# @        -> /           (root filesystem)
+# @home    -> /home       (user data)
+# @log     -> /var/log    (logs, excluded from root snapshots)
+# @pkg     -> /var/cache/pacman/pkg  (package cache, excluded from root snapshots)
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@log
+btrfs subvolume create /mnt/@pkg
 
 # Unmount the root fs
 umount /mnt
@@ -199,13 +209,17 @@ umount /mnt
 
 <br>
 
-For this guide I'll compress the btrfs subvolumes with **Zstd**, which has proven to be [a good algorithm among the choices](https://www.phoronix.com/review/btrfs-zstd-compress)  
+For this guide I'll compress the btrfs subvolumes with **Zstd** level 3, which has proven to be [a good algorithm among the choices](https://www.phoronix.com/review/btrfs-zstd-compress). `noatime` is added to all subvolumes to avoid unnecessary write amplification on SSDs.
 
 ```fish
-# Mount the root and home subvolume. If you don't want compression just remove the compress option.
-mount -o compress=zstd,subvol=@ /dev/nvme0n1p2 /mnt
+# Mount all subvolumes with compress=zstd:3 and noatime for best SSD performance.
+mount -o compress=zstd:3,noatime,subvol=@ /dev/nvme0n1p2 /mnt
 mkdir -p /mnt/home
-mount -o compress=zstd,subvol=@home /dev/nvme0n1p2 /mnt/home
+mount -o compress=zstd:3,noatime,subvol=@home /dev/nvme0n1p2 /mnt/home
+mkdir -p /mnt/var/log
+mount -o compress=zstd:3,noatime,subvol=@log /dev/nvme0n1p2 /mnt/var/log
+mkdir -p /mnt/var/cache/pacman/pkg
+mount -o compress=zstd:3,noatime,subvol=@pkg /dev/nvme0n1p2 /mnt/var/cache/pacman/pkg
 ```
 
 <br>
@@ -227,23 +241,23 @@ mount /dev/nvme0n1p1 /mnt/efi
 # "base-devel" base development packages
 # "git" to install the git vcs
 # "btrfs-progs" are user-space utilities for file system management ( needed to harness the potential of btrfs )
-# "grub" the bootloader
-# "efibootmgr" needed to install grub
-# "grub-btrfs" adds btrfs support for the grub bootloader and enables the user to directly boot from snapshots
-# "inotify-tools" used by grub btrfsd deamon to automatically spot new snapshots and update grub entries
+# "systemd-ukify" builds Unified Kernel Images (UKI) for the systemd-stub bootloader
+# "efibootmgr" needed by bootctl to register boot entries
 # "timeshift" a GUI app to easily create,plan and restore snapshots using BTRFS capabilities
 # "intel-ucode" microcode updates for the cpu (HP Spectre 14 has an Intel CPU)
 # "vim" my goto editor, if unfamiliar use nano
 # "networkmanager" to manage Internet connections ( it also has an applet package network-manager-applet )
-# "iwd" iNet wireless daemon — included so NetworkManager can use it for WiFi management after reboot
+# "iwd" iNet wireless daemon — used as the WiFi backend for NetworkManager for better roaming
 # "pipewire pipewire-alsa pipewire-pulse pipewire-jack" for the new audio framework replacing pulse and jack. 
 # "wireplumber" the pipewire session manager.
 # "reflector" to manage mirrors for pacman
+# "pacman-contrib" provides paccache for automated package cache cleaning
+# "zram-generator" sets up compressed swap in RAM, replacing the need for a swap partition or swapfile
 # "fish" my favourite shell
 # "openssh" to use ssh and manage keys
 # "man" for manual pages
 # "sudo" to run commands as other users
-pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs grub efibootmgr grub-btrfs inotify-tools timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector fish openssh man sudo intel-ucode
+pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs systemd-ukify efibootmgr timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector pacman-contrib zram-generator fish openssh man sudo intel-ucode
 ```
 
 <br>
@@ -254,7 +268,8 @@ pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs grub efibo
 # Fetch the disk mounting points as they are now ( we mounted everything before ) and generate instructions to let the system know how to mount the various disks automatically
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Check if fstab is fine ( it is if you've faithfully followed the previous steps )
+# Check if fstab is fine. Verify that ALL subvolumes (@, @home, @log, @pkg) are listed
+# and that each Btrfs line includes "compress=zstd:3" and "noatime" in its options.
 cat /mnt/etc/fstab
 ```
 
@@ -350,32 +365,89 @@ passwd
 useradd -mG wheel aiden
 passwd aiden
 
-# The command below is a one line command that will open the /etc/sudoers file with your favourite editor.
-# You can choose a different editor than vim by changing the EDITOR variable
-# Once opened, you have to look for a line which says something like "Uncomment to let members of group wheel execute any action"
-# and uncomment exactly the line BELOW it, by removing the #. This will grant superuser priviledges to your user.
-# Why are we issuing this command instead of a simple vim /etc/sudoers ? 
-# Because visudo does more than opening the editor, for example it locks the file from being edited simultaneously and
-# runs syntax checks to avoid committing an unreadable file.
-EDITOR=vim visudo
+# Instead of editing /etc/sudoers directly with visudo, create a drop-in file in /etc/sudoers.d/.
+# This is safer: a broken drop-in file won't lock you out of sudo, and it keeps the base file
+# pristine and easy to audit. The file must not be world-writable (chmod 440).
+echo '%wheel ALL=(ALL:ALL) ALL' | EDITOR='tee' visudo -f /etc/sudoers.d/10-admins
+chmod 440 /etc/sudoers.d/10-admins
 ```
 
 <br>
 
-## Grub configuration  
+## UKI setup
 
-Now I'll [deploy grub](https://wiki.archlinux.org/title/GRUB#Installation)  
+A **Unified Kernel Image (UKI)** bundles the kernel, initramfs, kernel command line, and CPU microcode into a single signed `.efi` binary. This makes the boot process **atomic** (one file = one boot state) and is the foundation for Secure Boot with custom keys. We use `systemd-stub` as the bootloader stub and `systemd-boot` (`bootctl`) as the EFI boot manager.
+
+Initialize systemd-boot on the EFI system partition:
 
 ```fish
-grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB  
+bootctl install
 ```
 
 <br>
 
-Generate the grub configuration ( it will include the microcode installed with pacstrap earlier )  
+Create the kernel command line file that `ukify` will embed into the UKI. Replace `PARTUUID` with the actual UUID of your root partition (`blkid /dev/nvme0n1p2`):
 
 ```fish
-grub-mkconfig -o /boot/grub/grub.cfg
+mkdir -p /etc/kernel
+
+# Write the kernel command line. Adjust root= if your partition layout differs.
+# The "quiet" and "splash" flags give a clean boot; remove them for verbose output.
+echo "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet splash" \
+  > /etc/kernel/cmdline
+```
+
+<br>
+
+Build the initial UKI manually:
+
+```fish
+ukify build \
+  --linux=/boot/vmlinuz-linux \
+  --initrd=/boot/intel-ucode.img \
+  --initrd=/boot/initramfs-linux.img \
+  --cmdline=@/etc/kernel/cmdline \
+  --output=/efi/EFI/Linux/arch-linux.efi
+```
+
+<br>
+
+Register the UKI as a boot entry so the firmware can find it:
+
+```fish
+efibootmgr --create \
+  --disk /dev/nvme0n1 --part 1 \
+  --label "Arch Linux (UKI)" \
+  --loader 'EFI\Linux\arch-linux.efi' \
+  --unicode
+```
+
+<br>
+
+**Automation — pacman hook:** Install a hook so the UKI is automatically rebuilt every time the kernel or microcode is updated.
+
+```fish
+mkdir -p /etc/pacman.d/hooks
+
+cat > /etc/pacman.d/hooks/95-ukify.hook << 'EOF'
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/modules/*/vmlinuz
+Target = boot/intel-ucode.img
+
+[Action]
+Description = Rebuilding Unified Kernel Image...
+When = PostTransaction
+Exec = /usr/bin/ukify build \
+  --linux=/boot/vmlinuz-linux \
+  --initrd=/boot/intel-ucode.img \
+  --initrd=/boot/initramfs-linux.img \
+  --cmdline=@/etc/kernel/cmdline \
+  --output=/efi/EFI/Linux/arch-linux.efi
+Depends = systemd
+EOF
 ```
 
 <br>
@@ -403,18 +475,23 @@ timedatectl set-ntp true
 
 <br>
 
-## Automatic snapshot boot entries update  
+## zram setup
 
-Each time a system snapshot is taken with timeshift, it will be available for boot in the bootloader, however you need to manually regenerate the grub configuration, this can be avoided thanks to `grub-btrfs`, which can automatically update the grub boot entries.  
+For high-performance laptops, **zram** is the modern standard for swap. It creates a compressed swap device entirely in RAM, which means zero SSD wear and dramatically better system responsiveness under memory pressure compared to a traditional swap partition or swapfile.
 
-Edit the **`grub-btrfsd`** service and because I will rely on timeshift for snapshotting, I am going to replace `ExecStart=...` with `ExecStart=/usr/bin/grub-btrfsd --syslog --timeshift-auto`. If you don't use timeshift or prefer to manually update the entries then lookup [here](https://github.com/Antynea/grub-btrfs)  
+`zram-generator` (already installed via pacstrap) wires this up automatically at boot through systemd.
 
 ```fish
-sudo systemctl edit --full grub-btrfsd
-
-# Enable grub-btrfsd service to run on boot
-sudo systemctl enable grub-btrfsd
+# Create the zram-generator configuration.
+# This creates one zram device sized at half of total RAM, using zstd compression.
+cat > /etc/systemd/zram-generator.conf << 'EOF'
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+EOF
 ```
+
+The service `systemd-zram-setup@zram0.service` will be activated automatically on the next boot. No physical swap partition or swapfile is required.
 
 <br>
 
@@ -427,12 +504,61 @@ To gain access to the Arch User Repository we need an AUR helper. I will use [**
 ```fish
 # Install paru
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/paru.git && cd paru && makepkg -si
-
-# Install "timeshift-autosnap", a configurable pacman hook which automatically makes snapshots before pacman upgrades.
-paru -S timeshift-autosnap
 ```
 
-> Learn more about timeshift autosnap [here](https://gitlab.com/gobonja/timeshift-autosnap)
+<br>
+
+## System hygiene and performance
+
+### XDG Base Directory
+
+Setting `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_DATA_HOME` system-wide via `/etc/environment` ensures that well-behaved applications store their files under explicit, predictable paths rather than scattering hidden dot-folders across `$HOME`. This keeps the user's home directory clean and easy to back up or inspect.
+
+```fish
+sudo tee -a /etc/environment << 'EOF'
+
+# XDG Base Directory — keep $HOME pristine
+XDG_CONFIG_HOME="$HOME/.config"
+XDG_CACHE_HOME="$HOME/.cache"
+XDG_DATA_HOME="$HOME/.local/share"
+XDG_STATE_HOME="$HOME/.local/state"
+EOF
+```
+
+<br>
+
+### NetworkManager iwd backend
+
+By default NetworkManager uses its own internal `wpa_supplicant` WiFi backend. Switching to `iwd` (already installed) gives better WiFi roaming, faster scanning, and lower memory usage.
+
+```fish
+sudo mkdir -p /etc/NetworkManager/conf.d
+
+sudo tee /etc/NetworkManager/conf.d/wifi_backend.conf << 'EOF'
+[device]
+wifi.backend=iwd
+EOF
+```
+
+Restart NetworkManager to apply the change:
+
+```fish
+sudo systemctl restart NetworkManager
+```
+
+<br>
+
+### Maintenance timers
+
+Enable these two systemd timers so the system keeps itself clean automatically:
+
+- **`reflector.timer`** — periodically refreshes the pacman mirror list, ensuring you always download from fast mirrors.
+- **`paccache.timer`** — runs `paccache` weekly to trim the pacman package cache (from `pacman-contrib`). By default it keeps the three most recent versions of each *installed* package and removes all cached versions of *uninstalled* packages, reclaiming disk space automatically.
+
+```fish
+sudo systemctl enable --now reflector.timer
+sudo systemctl enable --now paccache.timer
+```
 
 <br>
 
