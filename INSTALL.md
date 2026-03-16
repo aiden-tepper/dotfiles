@@ -17,7 +17,7 @@
   - [Root and users](#root-and-users)
   - [UKI setup](#uki-setup)
   - [Unmount everything and reboot](#unmount-everything-and-reboot)
-  - [zram setup](#zram-setup)
+  - [Intel Optane swap](#intel-optane-swap)
   - [Paru AUR helper installation](#paru-aur-helper-installation)
   - [System hygiene and performance](#system-hygiene-and-performance)
     - [XDG Base Directory](#xdg-base-directory)
@@ -182,6 +182,12 @@ mkfs.fat -F 32 /dev/nvme0n1p1
 # Find the root partition. For me it's /dev/nvme0n1p2 and format it. I will use BTRFS.
 mkfs.btrfs /dev/nvme0n1p2
 
+# HP Spectre 14: verify the Optane drive is at /dev/nvme1n1 before formatting.
+# Run: lsblk -o NAME,MODEL and confirm nvme1n1 is the Intel Optane device.
+# Then format it as swap and activate it so genfstab picks it up.
+mkswap /dev/nvme1n1
+swapon /dev/nvme1n1
+
 # Mount the root fs to make it accessible
 mount /dev/nvme0n1p2 /mnt
 ```
@@ -252,12 +258,11 @@ mount /dev/nvme0n1p1 /mnt/efi
 # "wireplumber" the pipewire session manager.
 # "reflector" to manage mirrors for pacman
 # "pacman-contrib" provides paccache for automated package cache cleaning
-# "zram-generator" sets up compressed swap in RAM, replacing the need for a swap partition or swapfile
 # "fish" my favourite shell
 # "openssh" to use ssh and manage keys
 # "man" for manual pages
 # "sudo" to run commands as other users
-pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs systemd-ukify efibootmgr timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector pacman-contrib zram-generator fish openssh man sudo intel-ucode
+pacstrap -K /mnt base base-devel linux linux-firmware git btrfs-progs systemd-ukify efibootmgr timeshift vim networkmanager iwd pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector pacman-contrib fish openssh man sudo intel-ucode
 ```
 
 <br>
@@ -475,23 +480,19 @@ timedatectl set-ntp true
 
 <br>
 
-## zram setup
+## Intel Optane swap
 
-For high-performance laptops, **zram** is the modern standard for swap. It creates a compressed swap device entirely in RAM, which means zero SSD wear and dramatically better system responsiveness under memory pressure compared to a traditional swap partition or swapfile.
+The HP Spectre 14 has an Intel Optane drive at `/dev/nvme1n1`. Because Optane offers dramatically lower latency than a regular NVMe SSD, it makes an ideal dedicated swap device — providing better responsiveness under memory pressure and shifting swap-induced wear away from the primary SSD onto the Optane drive.
 
-`zram-generator` (already installed via pacstrap) wires this up automatically at boot through systemd.
+The drive was already formatted with `mkswap` and activated with `swapon` during the [Disk formatting](#disk-formatting) step, so `genfstab` will have included it in `/etc/fstab` automatically. No further configuration is required.
 
 ```fish
-# Create the zram-generator configuration.
-# This creates one zram device sized at half of total RAM, using zstd compression.
-cat > /etc/systemd/zram-generator.conf << 'EOF'
-[zram0]
-zram-size = ram / 2
-compression-algorithm = zstd
-EOF
-```
+# Verify the swap entry is present in fstab
+grep swap /etc/fstab
 
-The service `systemd-zram-setup@zram0.service` will be activated automatically on the next boot. No physical swap partition or swapfile is required.
+# Verify swap is active
+swapon --show
+```
 
 <br>
 
