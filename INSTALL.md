@@ -431,7 +431,7 @@ Unlike a traditional setup where the command line lives in a bootloader config f
 mkdir -p /etc/kernel
 
 # We fetch the UUID of your root partition and tell it which subvolume to boot
-echo "root=UUID=$(blkid -s UUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet" \
+echo "root=UUID=$(blkid -s UUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw" \
   > /etc/kernel/cmdline
 ```
 
