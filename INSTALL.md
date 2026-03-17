@@ -399,9 +399,10 @@ Before building the kernel images, verify that mkinitcpio is configured correctl
 
 ```bash
 # Verify that the btrfs module will be included in the initramfs.
-# Open /etc/mkinitcpio.conf and ensure "btrfs" is in the MODULES array:
-#   MODULES=(btrfs)
-# This guarantees the module is always present, even if autodetection fails.
+# Open /etc/mkinitcpio.conf and update HOOKS to include "microcode" and "btrfs"
+#   'microcode' MUST be first.
+#   'btrfs' should come after 'block'.
+# HOOKS=(microcode base systemd autodetect modconf kms keyboard sd-vconsole block btrfs filesystems fsck)
 vim /etc/mkinitcpio.conf
 
 # Regenerate initramfs images after any changes
@@ -448,16 +449,13 @@ Modify the file to look like this (comment out the `.img` lines and add the `.ef
 # /etc/mkinitcpio.d/linux.preset
 ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/intel-ucode.img) # Crucial for your HP Spectre
 
 PRESETS=('default' 'fallback')
 
 # Default UKI
-# default_image="/boot/initramfs-linux.img" # Comment this out
 default_uki="/efi/EFI/Linux/arch-linux.efi"
 
 # Fallback UKI
-# fallback_image="/boot/initramfs-linux-fallback.img" # Comment this out
 fallback_options="-S autodetect"
 fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 ```
