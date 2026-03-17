@@ -557,7 +557,7 @@ EOF
 
 # Reload systemd so it picks up the new generator config, then start the device
 sudo systemctl daemon-reload
-sudo systemctl start /dev/zram0
+sudo systemctl start dev-zram0.swap
 
 # Verify zRAM is active (should show /dev/zram0 alongside any physical swap)
 swapon --show
