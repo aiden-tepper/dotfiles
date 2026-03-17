@@ -19,6 +19,7 @@
   - [UKI setup](#uki-setup)
   - [Unmount everything and reboot](#unmount-everything-and-reboot)
   - [Intel Optane swap](#intel-optane-swap-hp-spectre-14--skip-if-you-dont-have-optane)
+  - [zRAM swap](#zram-swap)
   - [Paru AUR helper installation](#paru-aur-helper-installation)
   - [System hygiene and performance](#system-hygiene-and-performance)
     - [XDG Base Directory](#xdg-base-directory)
@@ -296,6 +297,15 @@ arch-chroot /mnt
 
 <br>
 
+Disable BTRFS Copy-on-Write on the systemd journal directory. CoW combined with append-heavy workloads like `journald` causes severe file fragmentation over time. `chattr +C` only affects newly written files, so set it on the empty directory now before the journal starts writing:
+
+```bash
+mkdir -p /var/log/journal
+chattr +C /var/log/journal
+```
+
+<br>
+
 ## Set up the time zone
 
 ```bash
@@ -431,6 +441,8 @@ Build the initial UKIs manually (main **and** fallback). The fallback image incl
 
 ```bash
 # Main UKI
+# IMPORTANT: microcode MUST be the first --initrd. The CPU loads it before the
+# initramfs, so reordering these arguments will silently break microcode updates.
 ukify build \
   --linux=/boot/vmlinuz-linux \
   --initrd=/boot/intel-ucode.img \
@@ -476,6 +488,9 @@ efibootmgr --create \
 cat > /usr/local/bin/rebuild-ukis << 'SCRIPT'
 #!/bin/bash
 set -euo pipefail
+
+# IMPORTANT: microcode MUST be the first --initrd. The CPU loads it before the
+# initramfs, so reordering these arguments will silently break microcode updates.
 
 # Main UKI
 /usr/bin/ukify build \
@@ -566,6 +581,37 @@ Since Optane has much lower latency than a regular SSD, you may want to tune `vm
 echo 'vm.swappiness=100' | sudo tee /etc/sysctl.d/99-swappiness.conf
 sudo sysctl --system
 ```
+
+<br>
+
+## zRAM swap
+
+[**zRAM**](https://wiki.archlinux.org/title/Zram) creates a compressed swap device in RAM. Because it never touches disk, it is significantly faster than any physical swap -- even Optane. On laptops it also saves battery by avoiding disk I/O under memory pressure.
+
+zRAM **complements** physical swap: the kernel will prefer the faster zRAM device first and only overflow to disk-backed swap when zRAM fills up. If you have Optane swap configured above, this gives you two tiers (RAM -> Optane). If you skipped the Optane section, zRAM alone is an excellent lightweight swap solution.
+
+We use `zram-generator`, a systemd-native tool that creates and configures the zRAM device automatically at boot:
+
+```bash
+sudo pacman -S zram-generator
+
+sudo tee /etc/systemd/zram-generator.conf << 'EOF'
+[zram0]
+# Allocate half of total RAM for compressed swap.
+# With typical ~2:1 compression, this effectively doubles your usable memory.
+zram-size = ram / 2
+compression-algorithm = zstd
+EOF
+
+# Reload systemd so it picks up the new generator config, then start the device
+sudo systemctl daemon-reload
+sudo systemctl start /dev/zram0
+
+# Verify zRAM is active (should show /dev/zram0 alongside any physical swap)
+swapon --show
+```
+
+> **Note:** zRAM gets a higher priority than disk swap by default, so the kernel will use it first. No manual priority tuning is needed.
 
 <br>
 
