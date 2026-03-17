@@ -412,126 +412,80 @@ mkinitcpio -P
 
 ## UKI setup
 
-A **Unified Kernel Image (UKI)** bundles the kernel, initramfs, kernel command line, and CPU microcode into a single signed `.efi` binary. This makes the boot process **atomic** (one file = one boot state) and is the foundation for Secure Boot with custom keys. We use `systemd-stub` as the bootloader stub and `systemd-boot` (`bootctl`) as the EFI boot manager.
+A **Unified Kernel Image (UKI)** bundles the kernel, initramfs, kernel command line, and CPU microcode into a single signed `.efi` binary. Instead of managing complex bootloader entries, your BIOS simply points to this one file. We will use `systemd-boot` as our boot manager and `mkinitcpio` to build the UKIs natively.
 
-> **Alternative approach:** Since mkinitcpio 38+, you can configure UKI generation directly in `/etc/mkinitcpio.d/linux.preset` by setting `default_uki=` and `fallback_uki=`. This makes mkinitcpio build UKIs natively on `mkinitcpio -P` and eliminates the need for manual `ukify build` calls and the custom pacman hook below. The manual `ukify` approach used here gives you more explicit control, but the mkinitcpio preset method is less code to maintain. See [the wiki](https://wiki.archlinux.org/title/Unified_kernel_image#mkinitcpio) for details.
+1. Initialize the Boot Manager
 
-Initialize systemd-boot on the EFI system partition:
+First, install the systemd-boot binaries to your EFI partition.
 
 ```bash
 bootctl install
 ```
 
-<br>
+2. Configure the Kernel Command Line
 
-Create the kernel command line file that `ukify` will embed into the UKI. Replace `PARTUUID` with the actual UUID of your root partition (`blkid /dev/nvme0n1p2`):
+Unlike a traditional setup where the command line lives in a bootloader config file, for a UKI, it must be embedded *into* the binary.
 
 ```bash
 mkdir -p /etc/kernel
 
-# Write the kernel command line. Adjust root= if your partition layout differs.
-# "quiet" suppresses most boot messages; remove it for verbose output during debugging.
-echo "root=PARTUUID=$(blkid -s PARTUUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet" \
+# We fetch the UUID of your root partition and tell it which subvolume to boot
+echo "root=UUID=$(blkid -s UUID -o value /dev/nvme0n1p2) rootflags=subvol=@ rw quiet" \
   > /etc/kernel/cmdline
 ```
 
-<br>
+3. Update mkinitcpio presets
 
-Build the initial UKIs manually (main **and** fallback). The fallback image includes all kernel modules, so you can always boot even if the main initramfs is missing a driver:
+This is the "magic" step. We tell `mkinitcpio` to output `.efi` files directly into your EFI partition. Edit the linux preset file:
 
 ```bash
-# Main UKI
-# IMPORTANT: microcode MUST be the first --initrd. The CPU loads it before the
-# initramfs, so reordering these arguments will silently break microcode updates.
-ukify build \
-  --linux=/boot/vmlinuz-linux \
-  --initrd=/boot/intel-ucode.img \
-  --initrd=/boot/initramfs-linux.img \
-  --cmdline=@/etc/kernel/cmdline \
-  --output=/efi/EFI/Linux/arch-linux.efi
-
-# Fallback UKI (uses the full fallback initramfs)
-ukify build \
-  --linux=/boot/vmlinuz-linux \
-  --initrd=/boot/intel-ucode.img \
-  --initrd=/boot/initramfs-linux-fallback.img \
-  --cmdline=@/etc/kernel/cmdline \
-  --output=/efi/EFI/Linux/arch-linux-fallback.efi
+vim /etc/mkinitcpio.d/linux.preset
 ```
 
-<br>
-
-Register both UKIs as boot entries so the firmware can find them. The fallback entry has a lower priority and acts as a safety net:
+Modify the file to look like this (comment out the `.img` lines and add the `.efi` lines):
 
 ```bash
-# Main entry
-efibootmgr --create \
-  --disk /dev/nvme0n1 --part 1 \
-  --label "Arch Linux (UKI)" \
-  --loader 'EFI\Linux\arch-linux.efi' \
-  --unicode
+# /etc/mkinitcpio.d/linux.preset
+ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/intel-ucode.img) # Crucial for your HP Spectre
 
-# Fallback entry
-efibootmgr --create \
-  --disk /dev/nvme0n1 --part 1 \
-  --label "Arch Linux (UKI fallback)" \
-  --loader 'EFI\Linux\arch-linux-fallback.efi' \
-  --unicode
-```
+PRESETS=('default' 'fallback')
 
-<br>
-
-**Automation — pacman hook:** Install a hook so the UKIs are automatically rebuilt every time the kernel or microcode is updated. Pacman hook `Exec=` does **not** support backslash line continuations, so we wrap the build commands in a script.
-
-```bash
-# Create the rebuild script
-cat > /usr/local/bin/rebuild-ukis << 'SCRIPT'
-#!/bin/bash
-set -euo pipefail
-
-# IMPORTANT: microcode MUST be the first --initrd. The CPU loads it before the
-# initramfs, so reordering these arguments will silently break microcode updates.
-
-# Main UKI
-/usr/bin/ukify build \
-  --linux=/boot/vmlinuz-linux \
-  --initrd=/boot/intel-ucode.img \
-  --initrd=/boot/initramfs-linux.img \
-  --cmdline=@/etc/kernel/cmdline \
-  --output=/efi/EFI/Linux/arch-linux.efi
+# Default UKI
+# default_image="/boot/initramfs-linux.img" # Comment this out
+default_uki="/efi/EFI/Linux/arch-linux.efi"
 
 # Fallback UKI
-/usr/bin/ukify build \
-  --linux=/boot/vmlinuz-linux \
-  --initrd=/boot/intel-ucode.img \
-  --initrd=/boot/initramfs-linux-fallback.img \
-  --cmdline=@/etc/kernel/cmdline \
-  --output=/efi/EFI/Linux/arch-linux-fallback.efi
-SCRIPT
-
-chmod +x /usr/local/bin/rebuild-ukis
+# fallback_image="/boot/initramfs-linux-fallback.img" # Comment this out
+fallback_options="-S autodetect"
+fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 ```
+
+4. Build the UKIs
+
+Now, simply run the standard generator. It will see the `_uki` targets and build the combined binaries for you.
 
 ```bash
-mkdir -p /etc/pacman.d/hooks
-
-cat > /etc/pacman.d/hooks/95-ukify.hook << 'EOF'
-[Trigger]
-Type = Path
-Operation = Install
-Operation = Upgrade
-Target = usr/lib/modules/*/vmlinuz
-Target = boot/intel-ucode.img
-
-[Action]
-Description = Rebuilding Unified Kernel Images (main + fallback)...
-When = PostTransaction
-Exec = /usr/local/bin/rebuild-ukis
-Depends = systemd
-EOF
+mkdir -p /efi/EFI/Linux
+mkinitcpio -P
 ```
 
-<br>
+5. Register the Boot Entries
+
+Since we aren't using traditional `loader.conf` entries, we tell the UEFI firmware exactly where these files are.
+
+```bash
+# Main Entry
+efibootmgr --create --disk /dev/nvme0n1 --part 1 \
+  --label "Arch Linux" \
+  --loader 'EFI\Linux\arch-linux.efi' --unicode
+
+# Fallback Entry
+efibootmgr --create --disk /dev/nvme0n1 --part 1 \
+  --label "Arch Linux (Fallback)" \
+  --loader 'EFI\Linux\arch-linux-fallback.efi' --unicode
+```
 
 ## Unmount everything and reboot 
 
