@@ -1,0 +1,11 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# This script will run whenever packages.txt changes.
+# packages.txt hash: {{ include "packages.txt" | sha256sum }}
+
+echo "Checking for missing packages..."
+
+paru -S --needed --noconfirm - < {{ joinPath .chezmoi.sourceDir "packages.txt" | quote }}
+
+{{ end -}}
