@@ -1,2 +1,5 @@
 ghostty
 firefox
+zen-browser-bin
+starship
+neovim
