@@ -1,0 +1,81 @@
+return {
+	-- 	'akinsho/bufferline.nvim',
+	-- 	version = "*",
+	-- 	dependencies = 'nvim-tree/nvim-web-devicons',
+	-- 	config = function()
+	-- 		local bufferline = require("bufferline")
+	-- 		bufferline.setup({
+	-- 			options = {
+	-- 				numbers = function(opts)
+	-- 					return string.format('%s', opts.raise(opts.ordinal))
+	-- 				end,
+	-- 				separator_style = "thin",
+	-- 				show_buffer_close_icons = false,
+	-- 				show_close_icon = false,
+	-- 				offsets = {
+	-- 					{
+	-- 						filetype = "neo-tree",
+	-- 						text = "",
+	-- 						highlight = "Directory",
+	-- 						text_align = "center",
+	-- 						separator = true,
+	-- 					}
+	-- 				},
+	-- 				themable = true,
+	-- 				indicator = {
+	-- 					style = 'none'
+	-- 				}
+	-- 			},
+	-- 			highlights = {
+	-- 				buffer = {
+	-- 					fg = '#665c54',
+	-- 				},
+	-- 				fill = {
+	-- 					fg = '#665c54',
+	-- 				},
+	-- 				background = {
+	-- 					fg = '#665c54',
+	-- 				},
+	-- 				numbers = {
+	-- 					fg = '#665c54',
+	-- 				},
+	-- 				buffer_visible = {
+	-- 					fg = '#ebdbb2',
+	-- 					bold = true,
+	-- 					italic = false,
+	-- 				},
+	-- 				buffer_selected = {
+	-- 					fg = '#ebdbb2',
+	-- 					bold = true,
+	-- 					italic = false,
+	-- 				},
+	-- 				numbers_visible = {
+	-- 					fg = '#ebdbb2',
+	-- 					bold = true,
+	-- 					italic = false,
+	-- 				},
+	-- 				numbers_selected = {
+	-- 					fg = '#ebdbb2',
+	-- 					bold = true,
+	-- 					italic = false,
+	-- 				}
+	-- 			}
+	-- 		})
+	--
+	-- 		for i = 1, 9 do
+	-- 			vim.api.nvim_set_keymap(
+	-- 				'n',
+	-- 				'<leader>' .. i,
+	-- 				'<cmd>BufferLineGoToBuffer ' .. i .. '<CR>',
+	-- 				{ noremap = true, silent = true }
+	-- 			)
+	-- 		end
+	--
+	-- 		vim.api.nvim_set_keymap(
+	-- 			'n',
+	-- 			'gb',
+	-- 			'<cmd>BufferLinePick<CR>',
+	-- 			{ noremap = true, silent = true }
+	-- 		)
+	-- 	end,
+}
