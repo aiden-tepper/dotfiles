@@ -3,3 +3,4 @@ firefox
 zen-browser-bin
 starship
 neovim
+opencode-bin
