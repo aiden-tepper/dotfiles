@@ -1,0 +1,6 @@
+[Unit]
+Description=Update Noctalia Wallpaper based on time
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/wallpaper/wallpaper-sync.sh

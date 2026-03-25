@@ -19,6 +19,9 @@ input {
             // If this section is empty, niri will fetch xkb settings
             // from org.freedesktop.locale1. You can control these using
             // localectl set-x11-keymap.
+
+						// Makes caps lock an additional ctrl key
+						options "ctrl:nocaps"
         }
 
         // Enable numlock on startup, omitting this setting disables it.
@@ -36,6 +39,7 @@ input {
         // drag false
         // drag-lock
         natural-scroll
+				scroll-factor 0.3
         // accel-speed 0.2
         // accel-profile "flat"
         // scroll-method "two-finger"
@@ -75,7 +79,7 @@ input {
 // Find more information on the wiki:
 // https://yalter.github.io/niri/Configuration:-Outputs
 // Remember to uncomment the node by removing "/-"!
-/-output "eDP-1" {
+output "eDP-1" {
     // Uncomment this line to disable this output.
     // off
 
@@ -85,7 +89,7 @@ input {
     // for the resolution.
     // If the mode is omitted altogether or is invalid, niri will pick one automatically.
     // Run `niri msg outputs` while inside a niri instance to list all outputs and their modes.
-    mode "1920x1080@120.030"
+    mode "3000x2000@60.001"
 
     // You can use integer or fractional scale, for example use 1.5 for 150% scale.
     scale 2
@@ -103,15 +107,24 @@ input {
     // so to put another output directly adjacent to it on the right, set its x to 1920.
     // If the position is unset or results in an overlap, the output is instead placed
     // automatically.
-    position x=1280 y=0
+    position x=0 y=0
 }
+
+// Dell U2520D monitor
+output "DP-2" {
+    mode "2560x1440@59.951"
+    scale 1
+    transform "normal"
+		position x=-530 y=-1440
+}
+
 
 // Settings that influence how windows are positioned and sized.
 // Find more information on the wiki:
 // https://yalter.github.io/niri/Configuration:-Layout
 layout {
     // Set gaps around windows in logical pixels.
-    gaps 16
+    gaps 8
 
     // When to center a column when changing focus, options are:
     // - "never", default behavior, focusing an off-screen column will keep at the left
@@ -156,7 +169,7 @@ layout {
     // You can change how the focus ring looks.
     focus-ring {
         // Uncomment this line to disable the focus ring.
-        // off
+        off
 
         // How many logical pixels the ring extends out from the windows.
         width 4
@@ -215,7 +228,7 @@ layout {
     // You can enable drop shadows for windows.
     shadow {
         // Uncomment the next line to enable shadows.
-        // on
+        on
 
         // By default, the shadow draws only around its window, and not behind it.
         // Uncomment this setting to make the shadow draw behind its window.
@@ -275,7 +288,7 @@ spawn-at-startup "qs" "-c" "noctalia-shell"
 
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
-    // skip-at-startup
+    skip-at-startup
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
@@ -342,7 +355,7 @@ window-rule {
 // Example: enable rounded corners for all windows.
 // (This example rule is commented out with a "/-" in front.)
 window-rule {
-    geometry-corner-radius 20
+    geometry-corner-radius 10
     clip-to-geometry true
 }
 
