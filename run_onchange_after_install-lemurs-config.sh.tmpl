@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# config hash: {{ include (joinPath .chezmoi.homeDir ".config/system-configs/lemurs/config.toml") | sha256sum }}
+
+SOURCE_FILE="$HOME/.config/system-configs/lemurs/config.toml"
+TARGET_FILE="/etc/lemurs/config.toml"
+
+# Copy the file and set correct system permissions
+echo "Applying updated lemurs config to /etc..."
+sudo cp "$SOURCE_FILE" "$TARGET_FILE"
+    
+# Set system-appropriate permissions (root-owned, readable by all)
+sudo chown root:root "$TARGET_FILE"
+sudo chmod 644 "$TARGET_FILE"

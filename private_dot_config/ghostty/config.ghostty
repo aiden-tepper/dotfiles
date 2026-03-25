@@ -1,0 +1,3 @@
+theme = Gruvbox Dark
+window-decoration = none
+gtk-titlebar = false

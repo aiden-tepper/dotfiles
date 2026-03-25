@@ -1,11 +1,8 @@
-{{ if eq .chezmoi.os "linux" -}}
 #!/bin/bash
 
-# This script will run whenever packages.txt changes.
-# packages.txt hash: {{ include "packages.txt" | sha256sum }}
+# packages.txt hash: {{ include (joinPath .chezmoi.homeDir ".config/packages.txt") | sha256sum }}
 
-echo "Checking for missing packages..."
+PACKAGES_FILE="$HOME/.config/packages.txt"
 
-paru -S --needed --noconfirm - < {{ joinPath .chezmoi.sourceDir "packages.txt" | quote }}
-
-{{ end -}}
+echo "Updating system packages from $PACKAGES_FILE..."
+grep -v '^#' "$PACKAGES_FILE" | xargs -r paru -S --needed --noconfirm

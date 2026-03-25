@@ -1,0 +1,33 @@
+layout {
+    pane size=1 borderless=true {
+        plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
+            format_left "{mode}"
+            format_center "{tabs}"
+            format_right "#[fg=$gray]{command_weather} {command_usage} "
+            mode_locked "#[bg=$red,fg=$black]  #[fg=$red]"
+            // formatting for inactive tabs
+            tab_normal "#[fg=$gray]#[bg=$gray,fg=$black] {name} #[fg=$gray] "
+            tab_normal_fullscreen "#[fg=$gray]#[bg=$gray,fg=$black] {name}  #[fg=$gray] "
+            // formatting for the current active tab
+            tab_active "#[fg=$orange]#[bg=$orange,fg=$black] {name} #[fg=$orange] "
+            tab_active_fullscreen "#[fg=$orange]#[bg=$orange,fg=$black] {name}  #[fg=$orange] "
+            // weather widget
+            command_weather_command "bash -c ~/.config/zellij/scripts/weather.sh"
+            command_weather_format "{stdout}"
+            command_weather_interval "60"
+            command_weather_rendermode "static"
+            // usage widget
+            command_usage_command "bash -c ~/.config/zellij/scripts/usage.sh"
+            command_usage_format "{stdout}"
+            command_usage_interval "1"
+            command_usage_rendermode "static"
+            // colors
+            color_orange "#fe8019"
+            color_gray "#665c54"
+            color_red "#fb4934"
+            color_black "#282828"
+        }
+    }
+    pane
+}
+
