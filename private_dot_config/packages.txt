@@ -19,3 +19,4 @@ fzf
 eza
 zoxide
 kdlfmt
+sunsetr-bin
