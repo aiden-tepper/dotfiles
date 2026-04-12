@@ -1,5 +1,4 @@
 ghostty
-firefox
 zen-browser-bin
 starship
 neovim
@@ -20,3 +19,8 @@ eza
 zoxide
 kdlfmt
 sunsetr-bin
+tailscale
+python
+python-pip
+bambustudio-bin
+xwayland-satellite
