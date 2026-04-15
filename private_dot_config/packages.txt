@@ -24,3 +24,7 @@ python
 python-pip
 bambustudio-bin
 xwayland-satellite
+bluez
+bluez-utils
+bluetui
+zmk-studio-bin
