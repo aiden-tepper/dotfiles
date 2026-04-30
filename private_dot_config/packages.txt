@@ -28,3 +28,5 @@ bluez
 bluez-utils
 bluetui
 zmk-studio-bin
+rustup
+rust-analyzer
