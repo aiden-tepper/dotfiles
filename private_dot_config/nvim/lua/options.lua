@@ -3,8 +3,12 @@ vim.opt.foldmethod = 'manual'
 vim.opt.foldlevelstart = 99
 
 vim.opt.scrolloff = 2
--- never show me line breaks if they're not there
-vim.opt.wrap = false
+-- enable soft wrap
+vim.opt.wrap = true
+-- wrap at word boundaries
+vim.opt.linebreak = true
+-- maintain indentation
+vim.opt.breakindent = true
 -- always draw sign column. prevents buffer moving when adding/deleting sign
 vim.opt.signcolumn = 'yes'
 -- sweet sweet relative line numbers

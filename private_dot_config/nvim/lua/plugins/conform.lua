@@ -12,7 +12,7 @@ return {
 				typescript = { "prettierd" },
 				typescriptreact = { "prettierd" },
 				kdl = { "kdlfmt" },
-				markdown = { "prettierd" },
+				markdown = { "mdformat" },
 			},
 			format_on_save = {
 				-- These options will be passed to conform.format()

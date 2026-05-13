@@ -31,3 +31,4 @@ zmk-studio-bin
 rustup
 rust-analyzer
 git-delta
+mdformat
