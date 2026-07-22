@@ -32,3 +32,4 @@ rustup
 rust-analyzer
 git-delta
 mdformat
+nmap
