@@ -33,3 +33,4 @@ rust-analyzer
 git-delta
 mdformat
 nmap
+arp-scan
