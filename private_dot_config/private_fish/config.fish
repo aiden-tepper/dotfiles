@@ -23,4 +23,10 @@ set -gx VISUAL nvim
 
 fish_add_path ~/.cargo/bin
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
+
+# start hyprland on TTY1
+if status is-login
+    and test -z "$WAYLAND_DISPLAY"
+    and test "$XDG_VTNR" = 1
+    exec start-hyprland
+end
