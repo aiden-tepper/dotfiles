@@ -2,7 +2,6 @@ ghostty
 zen-browser-bin
 starship
 neovim
-lemurs
 timeshift
 zellij
 lazygit
